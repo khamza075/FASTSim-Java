@@ -12,8 +12,8 @@ public class FSJHybridPowerManagerAdvPHEV extends FSJHybridPowerManagerDefault {
 	public static final float MinMilesBeforeAbleToChangeMode = 0.15f;
 	
 	//Tuning constants
-	public static float HighSpeedBufferMPH = 80f;
-	public static float ChgDepleteBufferRelSOC = 0.04f;
+	public float HighSpeedBufferMPH = 80f;
+	public float ChgDepleteBufferRelSOC = 0.04f;
 
 	//Identifier for last engaged mode interval ID
 	protected int lastModeIntervalID;

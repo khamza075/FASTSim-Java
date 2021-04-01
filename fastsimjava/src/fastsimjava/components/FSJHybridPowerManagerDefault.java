@@ -16,7 +16,7 @@ public class FSJHybridPowerManagerDefault extends FSJHybridPowerManagerBase {
 	
 	//Constructor, sets the default values for tuning constants
 	public FSJHybridPowerManagerDefault() {
-		engineOnStaysOnSec = 4f;	//Adjust as needed by model of vehicle
+		engineOnStaysOnSec = 4f;	//Adjust as needed by the model of vehicle
 	}
 
 	//Interfacing function

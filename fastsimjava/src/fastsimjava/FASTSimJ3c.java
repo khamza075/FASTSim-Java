@@ -426,7 +426,7 @@ public class FASTSimJ3c {
 		//IMPORTANT ... every time a new quantity is added to this list, a new case in extractTimeRecord() function should be added (else output will be zero)
 	}
 	
-	//Utility function for quick extraction of curves from previous trip simulation after invoking the runTR() function
+	//Utility function for quick extraction of curves from previous trip simulation after invoking runTR() function
 	public float[] extractTimeRecord(TripRecordOutput recRequest) {
 		if (lastTripVehStates == null) return null;
 		

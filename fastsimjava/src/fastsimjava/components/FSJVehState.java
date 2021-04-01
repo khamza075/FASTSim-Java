@@ -9,7 +9,7 @@ public class FSJVehState {
 	//Header Strings
 	private static final String Header_MotionInfo = "prevSpeedMPH,prevSpeedMS,curDesiredSpeedMPH,achCurSpeedMPH,achCurSpeedMS,curSpeedSlipMPH,curRoadGrade,metersFromLastState,milesSinceStart";
 	private static final String Header_TimeInfo = "secSinceTripStart,deltaSecFromLastState,secFuelConvOn,secFuelConvOff";
-	private static final String Header_BatterySOCInfo = "swingKWh,relSoC,absSoC";
+	private static final String Header_BatterySOCInfo =  "swingKWh,relSoC,absSoC";
 	private static final String Header_EnergyUseInfo = "batteryKWhSinceLastState,batteryKWhSinceTripStart,fuelUseSinceLastState,fuelUseSinceTripStart";	
 	private static final String Header_InstPowerInfo = "dragKW,ascentKW,rollResKW,accelKW,auxKW,fricBrakeKW,regenKW,fcPowerOut,fcPowerIn,fcEffn,mtPowerOut,mtPowerIn,mtEffn";
 	public static final String HeaderString = Header_TimeInfo+","+Header_MotionInfo+","+Header_BatterySOCInfo+","+Header_EnergyUseInfo+","+Header_InstPowerInfo;

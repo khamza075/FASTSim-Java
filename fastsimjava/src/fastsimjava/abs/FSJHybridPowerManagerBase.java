@@ -11,6 +11,6 @@ public abstract class FSJHybridPowerManagerBase {
 	//Function to report the operating output power from the fuel converter
 	public abstract float fuelConvKWOut();
 	
-	//Function for PHEVs to inform the vehicle state whether they are operating in "charge-sustain"-like conditions
+	//Function for PHEVs to inform the vehicle state whether they are operating in "charge-sustain" -like conditions
 	public abstract boolean isInChargeSustain(FSJVehState vehCurState);
 }
