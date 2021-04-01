@@ -5,7 +5,7 @@ import fastsimjava.abs.*;
 
 public class FSJHybridPowerManagerDefault extends FSJHybridPowerManagerBase {
 	//Updated value for FC output power
-	private float fuelConvKWOut;
+	protected float fuelConvKWOut;
 	//Function to return current state of fuel converter output
 	public float fuelConvKWOut() {
 		return fuelConvKWOut;
@@ -19,7 +19,25 @@ public class FSJHybridPowerManagerDefault extends FSJHybridPowerManagerBase {
 		engineOnStaysOnSec = 4f;	//Adjust as needed by model of vehicle
 	}
 
+	//Interfacing function
 	public void setCurState(FSJVehState vehCurState, float mphDesired, float kWDesiredAtWheels, float fcMod,
+			float essChgDischgEffn, float totalAuxKW) {
+		//Call default calculation (Decision model by NREL) for HEVs or PHEVs
+		defaultCalculationOfFuelConvKWOut(vehCurState, mphDesired, kWDesiredAtWheels, fcMod, essChgDischgEffn, totalAuxKW);
+	}
+	
+	//Function to inform the vehicle state whether they are operating in "charge-sustain"-like conditions
+	public boolean isInChargeSustain(FSJVehState vehCurState) {
+		return defaultIsInChargeSustain(vehCurState);
+	}
+	protected boolean defaultIsInChargeSustain(FSJVehState vehCurState) {
+		float fuelUseTol = 0.000001f;
+		return vehCurState.energyUse.fuelUseSinceTripStart > fuelUseTol;
+	}
+
+	
+	//Default calculation
+	protected void defaultCalculationOfFuelConvKWOut(FSJVehState vehCurState, float mphDesired, float kWDesiredAtWheels, float fcMod,
 			float essChgDischgEffn, float totalAuxKW) {
 		//Data Objects
 		FSJVehModelParam vehModel = vehCurState.vehModel();
@@ -125,14 +143,14 @@ public class FSJHybridPowerManagerDefault extends FSJHybridPowerManagerBase {
 
 
 	//Sub-functions
-	private float calcMtTargetEssKW(float accSOCBuffer, float regenSOCBuffer, float essAccRegenDischKW, float essAccBufferChgKW,
+	protected float calcMtTargetEssKW(float accSOCBuffer, float regenSOCBuffer, float essAccRegenDischKW, float essAccBufferChgKW,
 			float essAccBufferDischgKW, float desiredESSKW4FCEff, float maxEssRegenBufferChgKW) {
 		if (accSOCBuffer > regenSOCBuffer) return essAccRegenDischKW;
 		if (essAccBufferChgKW > 0) return Math.max(-maxEssRegenBufferChgKW, Math.min(desiredESSKW4FCEff, -essAccBufferChgKW));
 		if (desiredESSKW4FCEff > 0) return Math.min(desiredESSKW4FCEff, essAccBufferDischgKW);
 		return Math.max(desiredESSKW4FCEff, -maxEssRegenBufferChgKW);
 	}
-	private float calcMtEssAccRegenDischKW(float accSOCBuffer, float regenSOCBuffer, float curAbsSOC, float deltaSec, FSJVehModelParam vehModel,
+	protected float calcMtEssAccRegenDischKW(float accSOCBuffer, float regenSOCBuffer, float curAbsSOC, float deltaSec, FSJVehModelParam vehModel,
 			float accBufferChgKW, float essRegenBufferDischgKW) {
 		float essKWh = vehModel.battery.maxEssKwh;
 		
@@ -141,29 +159,29 @@ public class FSJHybridPowerManagerDefault extends FSJHybridPowerManagerBase {
 		if (curAbsSOC < accSOCBuffer) return -accBufferChgKW;
 		return 0f;
 	}
-	private float calcEssAccBufferDischgKW(float accSOCBuffer, float curAbsSOC, float deltaSec, FSJVehModelParam vehModel) {
+	protected float calcEssAccBufferDischgKW(float accSOCBuffer, float curAbsSOC, float deltaSec, FSJVehModelParam vehModel) {
 		float essKWh = vehModel.battery.maxEssKwh;		
 		float essKW = vehModel.battery.maxEssKw;
 		
 		return Math.min(essKW, Math.max(0f, (curAbsSOC - accSOCBuffer)*essKWh*3600f/deltaSec));
 	}
-	private float calcEssAccBufferChgKW(float accSOCBuffer, float curAbsSOC, float deltaSec, FSJVehModelParam vehModel) {
+	protected float calcEssAccBufferChgKW(float accSOCBuffer, float curAbsSOC, float deltaSec, FSJVehModelParam vehModel) {
 		float essKWh = vehModel.battery.maxEssKwh;		
 		return Math.max(0f, (accSOCBuffer - curAbsSOC)*essKWh*3600f/deltaSec);
 	}
-	private float calcEssRegenBufferDischgKW(float regenSOCBuffer, float curAbsSOC, float deltaSec, FSJVehModelParam vehModel) {
+	protected float calcEssRegenBufferDischgKW(float regenSOCBuffer, float curAbsSOC, float deltaSec, FSJVehModelParam vehModel) {
 		float essKWh = vehModel.battery.maxEssKwh;
 		float essKW = vehModel.battery.maxEssKw;
 		
 		return Math.min(essKW, Math.max(0f, (curAbsSOC - regenSOCBuffer)*essKWh*3600f/deltaSec));
 	}
-	private float calcMaxEssRegenBufferChgKW(float regenSOCBuffer, float curAbsSOC, float deltaSec, FSJVehModelParam vehModel) {
+	protected float calcMaxEssRegenBufferChgKW(float regenSOCBuffer, float curAbsSOC, float deltaSec, FSJVehModelParam vehModel) {
 		float essKWh = vehModel.battery.maxEssKwh;
 		float essKW = vehModel.battery.maxEssKw;
 		
 		return Math.min(essKW, Math.max(0f, (regenSOCBuffer - curAbsSOC)*essKWh*3600f/deltaSec));
 	}
-	private float calcDesiredESSKW4FCEff(FSJFuelConverter fuelConv, FSJMotor motor, float mechKWPreTransmission, FSJVehModelParam vehModel) {
+	protected float calcDesiredESSKW4FCEff(FSJFuelConverter fuelConv, FSJMotor motor, float mechKWPreTransmission, FSJVehModelParam vehModel) {
 		float fcKWAtPeakEff = fuelConv.powerAtMaxEffKW();
 		float kwX = mechKWPreTransmission - fcKWAtPeakEff;
 		float delta = 0f;
@@ -176,7 +194,7 @@ public class FSJHybridPowerManagerDefault extends FSJHybridPowerManagerBase {
 		
 		return delta;
 	}
-	private float calcRegenSOCBuffer(float minAbsSOC, float maxAbsSOC, float speedMPH, FSJVehModelParam vehModel, FSJSimConstants simConst) {
+	protected float calcRegenSOCBuffer(float minAbsSOC, float maxAbsSOC, float speedMPH, FSJVehModelParam vehModel, FSJSimConstants simConst) {
 		float speedMS = speedMPH/FSJSimConstants.mphPerMps;
 		float vehKg = vehModel.massProp.totalKg;
 		float maxRegen = vehModel.transmission.maxRegen;
@@ -185,7 +203,7 @@ public class FSJHybridPowerManagerDefault extends FSJHybridPowerManagerBase {
 			
 		return Math.max(minAbsSOC, maxAbsSOC - (0.5f*vehKg*speedMS*speedMS*motorPeakEffn*maxRegen)/(3600f*1000f*essKWh));
 	}
-	private float calcAccSOCBuffer(float minAbsSOC, float maxAbsSOC, float speedMPH, FSJVehModelParam vehModel, FSJSimConstants simConst) {
+	protected float calcAccSOCBuffer(float minAbsSOC, float maxAbsSOC, float speedMPH, FSJVehModelParam vehModel, FSJSimConstants simConst) {
 		float speedMS = speedMPH/FSJSimConstants.mphPerMps;
 		float vehKg = vehModel.massProp.totalKg;
 		float bSpeedMS = vehModel.chargeControl.mphESSAccRsrvZero/FSJSimConstants.mphPerMps;

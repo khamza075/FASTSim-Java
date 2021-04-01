@@ -11,9 +11,8 @@ public class FSJVehState {
 	private static final String Header_TimeInfo = "secSinceTripStart,deltaSecFromLastState,secFuelConvOn,secFuelConvOff";
 	private static final String Header_BatterySOCInfo = "swingKWh,relSoC,absSoC";
 	private static final String Header_EnergyUseInfo = "batteryKWhSinceLastState,batteryKWhSinceTripStart,fuelUseSinceLastState,fuelUseSinceTripStart";	
-	private static final String Header_InstPowerInfo = "dragKW,ascentKW,rollResKW,accelKW,auxKW,hvacKW,fricBrakeKW,regenKW,fcPowerOut,fcPowerIn,fcEffn,mtPowerOut,mtPowerIn,mtEffn";
+	private static final String Header_InstPowerInfo = "dragKW,ascentKW,rollResKW,accelKW,auxKW,fricBrakeKW,regenKW,fcPowerOut,fcPowerIn,fcEffn,mtPowerOut,mtPowerIn,mtEffn";
 	public static final String HeaderString = Header_TimeInfo+","+Header_MotionInfo+","+Header_BatterySOCInfo+","+Header_EnergyUseInfo+","+Header_InstPowerInfo;
-	
 	
 	//Link to simulation constants
 	private FSJSimConstants simConsts;
@@ -217,6 +216,10 @@ public class FSJVehState {
 				absSoC = 0f;
 				break;
 			case hev:
+				swingKWh = vehModel.batterySwingKWh();
+				relSoC = 0.5f;
+				absSoC = vehModel.chargeControl.minSoCBatterySwing + relSoC*(vehModel.chargeControl.maxSoCBatterySwing-vehModel.chargeControl.minSoCBatterySwing);
+				break;
 			case bev:
 			case phev:
 				swingKWh = vehModel.batterySwingKWh();
@@ -267,7 +270,7 @@ public class FSJVehState {
 		
 	//Sub-class for various power consumption terms at the current instant
 	public class InstPowerInfo {
-		public float dragKW,ascentKW,rollResKW,accelKW,auxKW,hvacKW,fricBrakeKW,regenKW;
+		public float dragKW,ascentKW,rollResKW,accelKW,auxKW,fricBrakeKW,regenKW;
 		public float fcPowerOut,fcPowerIn,fcEffn,mtPowerOut,mtPowerIn,mtEffn;
 		
 		private InstPowerInfo() {
@@ -280,7 +283,6 @@ public class FSJVehState {
 			accelKW = other.accelKW;
 			
 			auxKW = other.auxKW;
-			hvacKW = other.hvacKW;
 			
 			fricBrakeKW = other.fricBrakeKW;
 			regenKW = other.regenKW;
@@ -301,7 +303,6 @@ public class FSJVehState {
 			accelKW = 0f;
 			
 			auxKW = 0f;
-			hvacKW = 0f;
 			
 			fricBrakeKW = 0f;
 			regenKW = 0f;
@@ -316,8 +317,8 @@ public class FSJVehState {
 		}
 		
 		@Override public String toString() {
-			return ""+dragKW+","+ascentKW+","+rollResKW+","+accelKW+","+auxKW+","+hvacKW
-					+","+fricBrakeKW+","+regenKW+","+fcPowerOut+","+fcPowerIn+","+fcEffn
+			return ""+dragKW+","+ascentKW+","+rollResKW+","+accelKW+","+auxKW+","+
+					fricBrakeKW+","+regenKW+","+fcPowerOut+","+fcPowerIn+","+fcEffn
 					+","+mtPowerOut+","+mtPowerIn+","+mtEffn;
 		}
 	}
@@ -377,8 +378,7 @@ public class FSJVehState {
 		float deltaSec = nextTimeSec - time.secSinceTripStart;
 		
 		//Get modifier values from add-ons and environmental conditions
-		float headWindMPH = 0f;
-		float hvacKW = 0f;
+		float headWindMPH = 0f;	//Place-holder that allows future updates to include the effect of head-winds
 		float additionalAuxKW = tpt.addAux;
 		float essMod = 1.0f;
 		float fcMod = 1.0f;
@@ -419,7 +419,9 @@ public class FSJVehState {
 				instPower.fcPowerOut + deltaSec*vehModel.fuelConv.maxFuelConvKw/vehModel.fuelConv.fuelConvSecsToPeakPwr);
 		float maxKWFromEss = vehModel.battery.maxEssKw*essChgDischgEffn;
 		float maxDriveKWpreTrnsm = 0f;
-
+		
+		boolean isInChargeSustain = hybPwrMgr.isInChargeSustain(this);
+		
 		switch (vehModel.fuelConv.fcEffType) {
 		case fuelCell:	//Fuel Cell
 			switch (vehModel.general.hybridDriveType) {
@@ -429,7 +431,7 @@ public class FSJVehState {
 				maxDriveKWpreTrnsm = maxMotorKWOut;
 				break;
 			default:	//Serial-Equivalent drive
-				if (energyUse.fuelUseSinceTripStart > fuelUseTol) {	//Fuel cell assists only if not in charge depletion mode (some fuel already used)
+				if (isInChargeSustain) {	//Fuel cell assists only if not in charge depletion mode (some fuel already used)
 					maxKWFromEss += maxFCKWout - totalAuxKW/essChgDischgEffn;	//Total available electric power that can be directed to the motor
 					maxMotorKWOut = Math.min(maxMotorKWOut, motor.outputPowerKW(maxKWFromEss));
 					maxDriveKWpreTrnsm = maxMotorKWOut;
@@ -449,7 +451,7 @@ public class FSJVehState {
 				maxDriveKWpreTrnsm = maxMotorKWOut + maxFCKWout;
 				break;
 			case parallelNoAccelAssistInChDepletion:
-				if (energyUse.fuelUseSinceTripStart > fuelUseTol) {	//Engine assists only if not in charge depletion mode (some fuel already used)
+				if (isInChargeSustain) {	//Engine assists only if not in charge depletion mode
 					maxKWFromEss += -totalAuxKW/essChgDischgEffn;
 					if (!vehModel.battery.overrideMaxEsskw) maxMotorKWOut = Math.min(maxMotorKWOut, motor.outputPowerKW(maxKWFromEss));
 					maxDriveKWpreTrnsm = maxMotorKWOut + maxFCKWout;
@@ -464,7 +466,7 @@ public class FSJVehState {
 				break;
 			case serial:
 				if (!vehModel.battery.overrideMaxEsskw) {	//If battery capability override not in effect, adjust maximum motor power by what the battery+engine can provide
-					if (energyUse.fuelUseSinceTripStart > fuelUseTol) {	//Engine assists only if not in charge depletion mode (some fuel already used)
+					if (isInChargeSustain) {	//Engine assists only if not in charge depletion mode (some fuel already used)
 						maxKWFromEss += maxFCKWout - totalAuxKW/essChgDischgEffn;	//Total available electric power that can be directed to the motor
 					} else {	//Vehicle is in charge depletion mode, engine will not assist
 						maxKWFromEss +=  -totalAuxKW/essChgDischgEffn;
@@ -692,9 +694,7 @@ public class FSJVehState {
 		instPower.rollResKW = rollResKW;
 		instPower.regenKW = regenKW;
 		
-		instPower.auxKW = totalAuxKW-hvacKW;
-		instPower.hvacKW = hvacKW;
-		
+		instPower.auxKW = totalAuxKW;		
 		instPower.fricBrakeKW = fricBreaksKW;
 		
 		instPower.fcPowerIn = fcConvKWIn;
@@ -728,7 +728,6 @@ public class FSJVehState {
 		
 		//Get modifier values from add-ons and environmental conditions
 		float headWindMPH = 0f;
-		float hvacKW = 0f;
 		float additionalAuxKW = tpt.addAux;
 		float essMod = 1.0f;
 		float airDensModifier = 1.0f;
@@ -864,8 +863,7 @@ public class FSJVehState {
 		instPower.rollResKW = rollResKW;
 		instPower.regenKW = regenKW;
 		
-		instPower.auxKW = totalAuxKW-hvacKW;
-		instPower.hvacKW = hvacKW;
+		instPower.auxKW = totalAuxKW;
 		
 		instPower.fricBrakeKW = fricBreaksKW;
 		
@@ -889,7 +887,6 @@ public class FSJVehState {
 		
 		//Get modifier values from add-ons and environmental conditions
 		float headWindMPH = 0f;
-		float hvacKW = 0f;
 		float additionalAuxKW = tpt.addAux;
 		float fcMod = 1.0f;
 		float airDensModifier = 1.0f;
@@ -997,8 +994,7 @@ public class FSJVehState {
 		instPower.ascentKW = ascentKW;
 		instPower.rollResKW = rollResKW;
 		
-		instPower.auxKW = totalAuxKW-hvacKW;
-		instPower.hvacKW = hvacKW;
+		instPower.auxKW = totalAuxKW;
 		
 		instPower.fricBrakeKW = fricBreaksKW;
 		
