@@ -38,7 +38,8 @@ public class FASTSimJ3c {
 	}
 	private void resetLastTripInfo() {
 		lastTripVehStates = null;
-		lastTripSummary = null;
+		if (lastTripSummary != null) lastTripSummary.reset();
+		else lastTripSummary = null;
 	}
 
 	//Function to set the vehicle model (do this before simulation, model remains until set to something else)

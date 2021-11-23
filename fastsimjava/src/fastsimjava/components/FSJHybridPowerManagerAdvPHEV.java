@@ -114,7 +114,8 @@ public class FSJHybridPowerManagerAdvPHEV extends FSJHybridPowerManagerDefault {
 		
 		//Reaching here means it's a PHEV and is employing some advanced mode
 			//Check if trip auto-reset is needed
-		if ((prevSOC < 0) || ((lastModeIntervalID > 0) && (vehCurState.time.secSinceTripStart <= MinSecondsBeforeAbleToChangeMode))) {
+		float prevSOCAutoResetThreshold = -0.8f;
+		if ((prevSOC < prevSOCAutoResetThreshold) || ((lastModeIntervalID > 0) && (vehCurState.time.secSinceTripStart <= MinSecondsBeforeAbleToChangeMode))) {
 			resetTrip(vehCurState.soc.relSoC); 
 		}
 		
@@ -135,7 +136,7 @@ public class FSJHybridPowerManagerAdvPHEV extends FSJHybridPowerManagerDefault {
 			dynamicTargetSOC = prevSOC;	//Dynamically identify/set target SOC if charge hold mode was engaged
 			chgModeSOCStart = prevSOC;
 		}
-		
+			
 		//Set target SOC depending on the charge control mode in current segment
 		switch (modeSeg[lastModeIntervalID].mode) {
 		case ChargeDeplete:
@@ -165,6 +166,7 @@ public class FSJHybridPowerManagerAdvPHEV extends FSJHybridPowerManagerDefault {
 		FSJMotor motor = vehCurState.motor();
 		FSJFuelConverter fuelConv = vehCurState.fuelConv();
 		
+
 		//Calculate adjusted target SOC
 		float adjustedMinAbsSOC = Math.min(
 				calcRegenSOCBuffer(vehModel.chargeControl.minSoCBatterySwing, vehModel.chargeControl.maxSoCBatterySwing, HighSpeedBufferMPH, vehModel, simConst),				

@@ -30,7 +30,6 @@ public class FSJOneFileVehModel {
 					readLine = fin.readLine();
 					reconstructedReadLine = reconstructedReadLine + "," + readLine.split(",")[1];
 				}
-				
 				vehModelParam = new FSJVehModelParam(reconstructedReadLine);
 			}
 			
